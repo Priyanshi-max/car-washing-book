@@ -1,22 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Settings, Plus, Calendar, CheckCircle, AlertCircle, DollarSign } from 'lucide-react';
 import BookingCard from '../Components/BookingCard';
-
-// Mock bookings (replace with API later)
-const mockBookings = [
-  { id: 1, customerName: "John Doe", carDetails: { make: "Toyota", model: "Corolla", year: 2020, type: "Sedan" }, serviceType: "Deluxe Wash", date: "2025-09-25", timeSlot: "10:00 AM - 11:00 AM", duration: 60, price: 25, status: "Pending", rating: 4 },
-  { id: 2, customerName: "Jane Smith", carDetails: { make: "Honda", model: "Civic", year: 2019, type: "Sedan" }, serviceType: "Full Detailing", date: "2025-09-26", timeSlot: "2:00 PM - 4:00 PM", duration: 120, price: 75, status: "Confirmed", rating: 5 },
-  { id: 3, customerName: "Mike Johnson", carDetails: { make: "Ford", model: "Explorer", year: 2021, type: "SUV" }, serviceType: "Basic Wash", date: "2025-09-24", timeSlot: "9:00 AM - 9:30 AM", duration: 30, price: 15, status: "Completed", rating: 4 },
-  { id: 4, customerName: "Sarah Wilson", carDetails: { make: "BMW", model: "X5", year: 2022, type: "Luxury SUV" }, serviceType: "Premium Detailing", date: "2025-09-27", timeSlot: "11:00 AM - 2:00 PM", duration: 180, price: 120, status: "Pending", rating: null }
-];
+import { getAllBookings } from '../services/bookingService';
 
 const HomePage = () => {
   const navigate = useNavigate();
-  const [bookings, setBookings] = useState(mockBookings);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterService, setFilterService] = useState('All');
+
+  useEffect(() => {
+    const getBookings = async () => {
+      setLoading(true);
+      const data = await getAllBookings();
+      setBookings(data);
+      setLoading(false);
+    };
+    getBookings();
+  }, []);
 
   const filteredBookings = bookings.filter(b => {
     const matchesSearch = b.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -28,7 +32,9 @@ const HomePage = () => {
 
   const handleView = id => navigate(`/booking/${id}`);
   const handleEdit = id => navigate(`/edit-booking/${id}`);
-  const handleDelete = id => { if(window.confirm('Delete booking?')) setBookings(bookings.filter(b => b.id !== id)); };
+  const handleDelete = id => { 
+    if(window.confirm('Delete booking?')) setBookings(bookings.filter(b => b.id !== id)); 
+  };
   const handleAddBooking = () => navigate('/add-booking');
 
   const stats = {
@@ -77,7 +83,9 @@ const HomePage = () => {
         </div>
 
         {/* Bookings */}
-        {filteredBookings.length > 0 ? (
+        {loading ? (
+          <p className="text-center text-gray-500 py-12">Loading bookings...</p>
+        ) : filteredBookings.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredBookings.map(b => <BookingCard key={b.id} booking={b} onView={handleView} onEdit={handleEdit} onDelete={handleDelete} />)}
           </div>

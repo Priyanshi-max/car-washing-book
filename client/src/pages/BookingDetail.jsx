@@ -20,33 +20,7 @@ import {
   Download,
   Share
 } from 'lucide-react';
-
-// Mock booking data - replace with actual API call
-const mockBooking = {
-  id: 1,
-  customerName: "John Doe",
-  customerPhone: "+1 (555) 123-4567",
-  customerEmail: "john.doe@email.com",
-  carDetails: { 
-    make: "Toyota", 
-    model: "Corolla", 
-    year: 2020, 
-    type: "Sedan",
-    color: "Silver",
-    licensePlate: "ABC-123"
-  },
-  serviceType: "Deluxe Wash",
-  addOns: ["Interior Cleaning", "Wax Protection"],
-  date: "2025-09-25",
-  timeSlot: "10:00 AM - 11:00 AM",
-  duration: 60,
-  price: 25,
-  status: "Pending",
-  rating: null,
-  notes: "Customer requested extra attention to the wheels and rims.",
-  createdAt: "2025-09-20",
-  location: "Main Street Car Wash"
-};
+import { getBookingById, updateBooking, deleteBooking } from '../services/bookingService';
 
 // Status Badge Component
 const StatusBadge = ({ status }) => {
@@ -123,13 +97,26 @@ const BookingDetail = () => {
   const navigate = useNavigate();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setBooking(mockBooking);
-      setLoading(false);
-    }, 500);
+    const fetchBooking = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await getBookingById(id);
+        setBooking(response.data || response); // Handle different response structures
+      } catch (err) {
+        console.error('Error fetching booking:', err);
+        setError(err.message || 'Failed to load booking details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchBooking();
+    }
   }, [id]);
 
   const handleBack = () => {
@@ -140,18 +127,30 @@ const BookingDetail = () => {
     navigate(`/edit-booking/${id}`);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this booking?')) {
-      // Simulate delete API call
-      console.log('Deleting booking:', id);
-      navigate('/');
+      try {
+        await deleteBooking(id);
+        console.log('Booking deleted successfully');
+        navigate('/');
+      } catch (err) {
+        console.error('Error deleting booking:', err);
+        alert('Failed to delete booking. Please try again.');
+      }
     }
   };
 
-  const handleStatusChange = (newStatus) => {
+  const handleStatusChange = async (newStatus) => {
     if (window.confirm(`Are you sure you want to change the status to ${newStatus}?`)) {
-      setBooking({ ...booking, status: newStatus });
-      // Here you would make an API call to update the status
+      try {
+        const updatedBooking = { ...booking, status: newStatus };
+        await updateBooking(id, updatedBooking);
+        setBooking(updatedBooking);
+        console.log('Booking status updated successfully');
+      } catch (err) {
+        console.error('Error updating booking status:', err);
+        alert('Failed to update booking status. Please try again.');
+      }
     }
   };
 
@@ -178,6 +177,23 @@ const BookingDetail = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900">Error Loading Booking</h2>
+          <p className="mt-2 text-gray-600">{error}</p>
+          <button
+            onClick={handleBack}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!booking) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -194,6 +210,15 @@ const BookingDetail = () => {
       </div>
     );
   }
+
+  // Helper function to format vehicle details
+  const getVehicleInfo = () => {
+    const { carDetails } = booking;
+    if (carDetails) {
+      return `${carDetails.year || ''} ${carDetails.make || ''} ${carDetails.model || ''}`.trim();
+    }
+    return 'Vehicle information not available';
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -292,9 +317,25 @@ const BookingDetail = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Customer Information</h2>
               <div className="space-y-1">
-                <InfoRow icon={User} label="Name" value={booking.customerName} />
-                <InfoRow icon={Phone} label="Phone" value={booking.customerPhone} />
-                <InfoRow icon={Mail} label="Email" value={booking.customerEmail} />
+                <InfoRow 
+                  icon={User} 
+                  label="Name" 
+                  value={booking.customerName || 'Not provided'} 
+                />
+                {booking.customerPhone && (
+                  <InfoRow 
+                    icon={Phone} 
+                    label="Phone" 
+                    value={booking.customerPhone} 
+                  />
+                )}
+                {booking.customerEmail && (
+                  <InfoRow 
+                    icon={Mail} 
+                    label="Email" 
+                    value={booking.customerEmail} 
+                  />
+                )}
               </div>
             </div>
 
@@ -305,22 +346,30 @@ const BookingDetail = () => {
                 <InfoRow 
                   icon={Car} 
                   label="Vehicle" 
-                  value={`${booking.carDetails.year} ${booking.carDetails.make} ${booking.carDetails.model}`} 
+                  value={getVehicleInfo()}
                 />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium text-gray-500 uppercase tracking-wide w-20">Type:</span>
-                    <span className="ml-3 text-base text-gray-900 font-medium">{booking.carDetails.type}</span>
+                {booking.carDetails && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    {booking.carDetails.type && (
+                      <div className="flex items-center">
+                        <span className="text-sm font-medium text-gray-500 uppercase tracking-wide w-20">Type:</span>
+                        <span className="ml-3 text-base text-gray-900 font-medium">{booking.carDetails.type}</span>
+                      </div>
+                    )}
+                    {booking.carDetails.color && (
+                      <div className="flex items-center">
+                        <span className="text-sm font-medium text-gray-500 uppercase tracking-wide w-20">Color:</span>
+                        <span className="ml-3 text-base text-gray-900 font-medium">{booking.carDetails.color}</span>
+                      </div>
+                    )}
+                    {booking.carDetails.licensePlate && (
+                      <div className="flex items-center md:col-span-2">
+                        <span className="text-sm font-medium text-gray-500 uppercase tracking-wide w-20">License:</span>
+                        <span className="ml-3 text-base text-gray-900 font-medium font-mono bg-gray-100 px-2 py-1 rounded">{booking.carDetails.licensePlate}</span>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center">
-                    <span className="text-sm font-medium text-gray-500 uppercase tracking-wide w-20">Color:</span>
-                    <span className="ml-3 text-base text-gray-900 font-medium">{booking.carDetails.color}</span>
-                  </div>
-                  <div className="flex items-center md:col-span-2">
-                    <span className="text-sm font-medium text-gray-500 uppercase tracking-wide w-20">License:</span>
-                    <span className="ml-3 text-base text-gray-900 font-medium font-mono bg-gray-100 px-2 py-1 rounded">{booking.carDetails.licensePlate}</span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -330,7 +379,7 @@ const BookingDetail = () => {
               <div className="space-y-4">
                 <div>
                   <p className="text-sm font-medium text-gray-500 uppercase tracking-wide">Service Type</p>
-                  <p className="mt-1 text-lg font-semibold text-gray-900">{booking.serviceType}</p>
+                  <p className="mt-1 text-lg font-semibold text-gray-900">{booking.serviceType || 'Not specified'}</p>
                 </div>
                 
                 {booking.addOns && booking.addOns.length > 0 && (
@@ -377,7 +426,7 @@ const BookingDetail = () => {
                   <Calendar className="w-5 h-5 text-gray-400 mr-3" />
                   <div>
                     <p className="text-sm text-gray-500">Date</p>
-                    <p className="font-semibold text-gray-900">{booking.date}</p>
+                    <p className="font-semibold text-gray-900">{booking.date || 'Not scheduled'}</p>
                   </div>
                 </div>
                 
@@ -385,25 +434,29 @@ const BookingDetail = () => {
                   <Clock className="w-5 h-5 text-gray-400 mr-3" />
                   <div>
                     <p className="text-sm text-gray-500">Time Slot</p>
-                    <p className="font-semibold text-gray-900">{booking.timeSlot}</p>
+                    <p className="font-semibold text-gray-900">{booking.timeSlot || 'Not scheduled'}</p>
                   </div>
                 </div>
                 
-                <div className="flex items-center">
-                  <Settings className="w-5 h-5 text-gray-400 mr-3" />
-                  <div>
-                    <p className="text-sm text-gray-500">Duration</p>
-                    <p className="font-semibold text-gray-900">{booking.duration} minutes</p>
+                {booking.duration && (
+                  <div className="flex items-center">
+                    <Settings className="w-5 h-5 text-gray-400 mr-3" />
+                    <div>
+                      <p className="text-sm text-gray-500">Duration</p>
+                      <p className="font-semibold text-gray-900">{booking.duration} minutes</p>
+                    </div>
                   </div>
-                </div>
+                )}
                 
-                <div className="flex items-center">
-                  <MapPin className="w-5 h-5 text-gray-400 mr-3" />
-                  <div>
-                    <p className="text-sm text-gray-500">Location</p>
-                    <p className="font-semibold text-gray-900">{booking.location}</p>
+                {booking.location && (
+                  <div className="flex items-center">
+                    <MapPin className="w-5 h-5 text-gray-400 mr-3" />
+                    <div>
+                      <p className="text-sm text-gray-500">Location</p>
+                      <p className="font-semibold text-gray-900">{booking.location}</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -415,7 +468,9 @@ const BookingDetail = () => {
                   <DollarSign className="w-5 h-5 text-green-600 mr-2" />
                   <span className="text-gray-600">Total Amount</span>
                 </div>
-                <span className="text-2xl font-bold text-green-600">${booking.price}</span>
+                <span className="text-2xl font-bold text-green-600">
+                  ${booking.price || '0'}
+                </span>
               </div>
             </div>
 
@@ -423,10 +478,12 @@ const BookingDetail = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Booking History</h3>
               <div className="space-y-3">
-                <div className="flex items-center text-sm">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
-                  <span className="text-gray-600">Booking created on {booking.createdAt}</span>
-                </div>
+                {booking.createdAt && (
+                  <div className="flex items-center text-sm">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                    <span className="text-gray-600">Booking created on {booking.createdAt}</span>
+                  </div>
+                )}
                 <div className="flex items-center text-sm">
                   <div className="w-2 h-2 bg-yellow-500 rounded-full mr-3"></div>
                   <span className="text-gray-600">Status: {booking.status}</span>
