@@ -61,10 +61,11 @@ const BookingCard = ({ booking, onView, onEdit, onDelete }) => {
         </div>
 
         <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-100">
-          <div className="flex items-center text-green-600 font-bold text-lg">
-            <DollarSign className="w-5 h-5 mr-1" />
-            {booking.price}
-          </div>
+         <div className="flex items-center text-green-600 font-bold text-lg">
+  <span className="mr-1">₹</span>
+  {booking.price}
+</div>
+
           <StarRating rating={booking.rating} />
         </div>
       </div>
