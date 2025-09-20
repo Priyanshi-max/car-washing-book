@@ -10,7 +10,7 @@ app.use(bodyParser.json());
 
 // MongoDB connection
 mongoose.connect(
-  'mongodb+srv://car_washing:Priyanshi%400502@cluster0.iaey1ch.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
+  'mongodb+srv://@cluster0.iaey1ch.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
 )
 .then(() => console.log('MongoDB connected'))
 .catch(err => console.error('MongoDB connection error:', err));
