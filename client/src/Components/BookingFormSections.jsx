@@ -80,9 +80,7 @@ const BookingFormSections = ({ formData, handleChange, handleAddOnChange, onVali
     if (cleanPhone.length !== 10) {
       return 'Phone number must be exactly 10 digits';
     }
-    if (!/^[6-9]/.test(cleanPhone)) {
-      return 'Phone number must start with 6, 7, 8, or 9';
-    }
+   
     return '';
   };
 
