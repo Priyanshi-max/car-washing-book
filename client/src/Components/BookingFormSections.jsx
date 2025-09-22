@@ -668,10 +668,7 @@ const BookingFormSections = ({ formData, handleChange, handleAddOnChange, onVali
       {/* Validation Summary */}
       {Object.keys(errors).length > 0 && (
         <div className="mt-8 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertCircle className="text-red-600" size={16} />
-            <h4 className="text-red-800 font-medium">Please fix the following errors:</h4>
-          </div>
+         
           <ul className="list-disc list-inside text-red-700 text-sm space-y-1">
             {Object.entries(errors).map(([field, error]) => (
               error && <li key={field}>{error}</li>
